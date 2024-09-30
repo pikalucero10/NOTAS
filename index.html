@@ -1,0 +1,319 @@
+<html><head><base href="https://miiagendapersonal.com/" /><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Mi Agenda Personal</title><style>
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f4f8;
+    color: #333;
+}
+.container {
+    display: flex;
+    min-height: 100vh;
+}
+.sidebar {
+    width: 300px;
+    background-color: #2c3e50;
+    padding: 20px;
+    overflow-y: auto;
+}
+.main-content {
+    flex-grow: 1;
+    padding: 40px;
+    background-color: #ecf0f1;
+}
+h1, h2 {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 30px;
+}
+textarea {
+    width: 100%;
+    height: 150px;
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #bdc3c7;
+    border-radius: 8px;
+    font-size: 16px;
+    resize: vertical;
+}
+button {
+    background-color: #3498db;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+    margin-right: 10px;
+}
+button:hover {
+    background-color: #2980b9;
+}
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+.note-item {
+    background-color: #34495e;
+    margin-bottom: 10px;
+    padding: 15px;
+    border-radius: 8px;
+    color: #ecf0f1;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+.note-item:hover {
+    background-color: #2c3e50;
+}
+.note-preview {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.delete-btn, .edit-btn, .pin-btn {
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    float: right;
+    transition: background-color 0.3s ease;
+    margin-left: 5px;
+}
+.delete-btn {
+    background-color: #e74c3c;
+}
+.delete-btn:hover {
+    background-color: #c0392b;
+}
+.edit-btn {
+    background-color: #f39c12;
+}
+.edit-btn:hover {
+    background-color: #d35400;
+}
+.pin-btn {
+    background-color: #27ae60;
+}
+.pin-btn:hover {
+    background-color: #2ecc71;
+}
+.selected-note {
+    background-color: #ecf0f1;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.list-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.list-item input[type="checkbox"] {
+    margin-right: 10px;
+}
+.list-item span {
+    flex-grow: 1;
+}
+.edit-mode textarea {
+    margin-bottom: 10px;
+}
+.search-bar {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #bdc3c7;
+    border-radius: 8px;
+    font-size: 16px;
+}
+.color-picker {
+    margin-bottom: 10px;
+}
+</style></head><body>
+<div class="container">
+    <div class="sidebar">
+        <input type="text" id="searchBar" class="search-bar" placeholder="Buscar notas...">
+        <ul id="noteList"></ul>
+    </div>
+    <div class="main-content">
+        <h1>Mi Agenda Personal</h1>
+        <div id="noteInputArea">
+            <textarea id="note" placeholder="Escribe tu nota aquí... Usa '-' al inicio de una línea para crear un elemento de lista"></textarea>
+            <input type="color" id="colorPicker" class="color-picker" value="#ffffff">
+            <button id="saveButton" onclick="addOrUpdateNote()">Agregar Nota</button>
+        </div>
+        <div id="selectedNote" class="selected-note" style="display: none;"></div>
+    </div>
+</div>
+
+<script>
+let notes = JSON.parse(localStorage.getItem('notes')) || [];
+let editingIndex = -1;
+
+function addOrUpdateNote() {
+    const noteText = document.getElementById('note').value;
+    const color = document.getElementById('colorPicker').value;
+
+    if (noteText) {
+        const newNote = {
+            text: noteText,
+            color: color,
+            pinned: false
+        };
+
+        if (editingIndex >= 0) {
+            notes[editingIndex] = { ...notes[editingIndex], ...newNote };
+            editingIndex = -1;
+            document.getElementById('saveButton').textContent = 'Agregar Nota';
+        } else {
+            notes.unshift(newNote);
+        }
+        saveNotes();
+        displayNotes();
+        resetInputs();
+        document.getElementById('selectedNote').style.display = 'none';
+    }
+}
+
+function resetInputs() {
+    document.getElementById('note').value = '';
+    document.getElementById('colorPicker').value = '#ffffff';
+}
+
+function deleteNote(index) {
+    notes.splice(index, 1);
+    saveNotes();
+    displayNotes();
+    document.getElementById('selectedNote').style.display = 'none';
+}
+
+function editNote(index) {
+    editingIndex = index;
+    const note = notes[index];
+    document.getElementById('note').value = note.text;
+    document.getElementById('colorPicker').value = note.color;
+    document.getElementById('saveButton').textContent = 'Actualizar Nota';
+    document.getElementById('selectedNote').style.display = 'none';
+}
+
+function togglePin(index) {
+    notes[index].pinned = !notes[index].pinned;
+    saveNotes();
+    displayNotes();
+}
+
+function saveNotes() {
+    localStorage.setItem('notes', JSON.stringify(notes));
+}
+
+function displayNotes() {
+    const noteList = document.getElementById('noteList');
+    noteList.innerHTML = '';
+    
+    const pinnedNotes = notes.filter(note => note.pinned);
+    const unpinnedNotes = notes.filter(note => !note.pinned);
+    const sortedNotes = [...pinnedNotes, ...unpinnedNotes];
+
+    sortedNotes.forEach((note, index) => {
+        const li = document.createElement('li');
+        li.className = 'note-item' + (note.pinned ? ' pinned' : '');
+        li.style.backgroundColor = note.color;
+        li.innerHTML = `
+            <div class="note-preview" onclick="showFullNote(${index})">${note.text.substring(0, 50)}${note.text.length > 50 ? '...' : ''}</div>
+            <button class="pin-btn" onclick="event.stopPropagation(); togglePin(${index})">${note.pinned ? 'Desfijar' : 'Fijar'}</button>
+            <button class="edit-btn" onclick="event.stopPropagation(); editNote(${index})">Editar</button>
+            <button class="delete-btn" onclick="event.stopPropagation(); deleteNote(${index})">X</button>
+        `;
+        noteList.appendChild(li);
+    });
+}
+
+function showFullNote(index) {
+    const selectedNote = document.getElementById('selectedNote');
+    const note = notes[index];
+    const noteContent = formatNoteContent(note.text);
+    selectedNote.innerHTML = `
+        <h2>Nota Completa</h2>
+        ${noteContent}
+        <button onclick="editNote(${index})">Editar esta nota</button>
+    `;
+    selectedNote.style.backgroundColor = note.color;
+    selectedNote.style.display = 'block';
+}
+
+function formatNoteContent(text) {
+    const lines = text.split('\n');
+    let formattedContent = '';
+    let inList = false;
+
+    lines.forEach(line => {
+        if (line.trim().startsWith('-')) {
+            if (!inList) {
+                formattedContent += '<ul>';
+                inList = true;
+            }
+            const listItemContent = line.trim().substring(1).trim();
+            formattedContent += `
+                <li class="list-item">
+                    <input type="checkbox" onchange="toggleListItem(this)">
+                    <span>${listItemContent}</span>
+                </li>
+            `;
+        } else {
+            if (inList) {
+                formattedContent += '</ul>';
+                inList = false;
+            }
+            formattedContent += `<p>${line}</p>`;
+        }
+    });
+
+    if (inList) {
+        formattedContent += '</ul>';
+    }
+
+    return formattedContent;
+}
+
+function toggleListItem(checkbox) {
+    const listItemText = checkbox.nextElementSibling;
+    if (checkbox.checked) {
+        listItemText.style.textDecoration = 'line-through';
+    } else {
+        listItemText.style.textDecoration = 'none';
+    }
+}
+
+function searchNotes() {
+    const searchTerm = document.getElementById('searchBar').value.toLowerCase();
+    const filteredNotes = notes.filter(note => 
+        note.text.toLowerCase().includes(searchTerm)
+    );
+    displayFilteredNotes(filteredNotes);
+}
+
+function displayFilteredNotes(filteredNotes) {
+    const noteList = document.getElementById('noteList');
+    noteList.innerHTML = '';
+    filteredNotes.forEach((note, index) => {
+        const li = document.createElement('li');
+        li.className = 'note-item' + (note.pinned ? ' pinned' : '');
+        li.style.backgroundColor = note.color;
+        li.innerHTML = `
+            <div class="note-preview" onclick="showFullNote(${notes.indexOf(note)})">${note.text.substring(0, 50)}${note.text.length > 50 ? '...' : ''}</div>
+            <button class="pin-btn" onclick="event.stopPropagation(); togglePin(${notes.indexOf(note)})">${note.pinned ? 'Desfijar' : 'Fijar'}</button>
+            <button class="edit-btn" onclick="event.stopPropagation(); editNote(${notes.indexOf(note)})">Editar</button>
+            <button class="delete-btn" onclick="event.stopPropagation(); deleteNote(${notes.indexOf(note)})">X</button>
+        `;
+        noteList.appendChild(li);
+    });
+}
+
+document.getElementById('searchBar').addEventListener('input', searchNotes);
+
+displayNotes();
+</script>
+</body></html>
